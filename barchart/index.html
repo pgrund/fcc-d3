@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title></title>
+
+    <link rel="stylesheet" href="./bower_components/bootstrap/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="./bower_components/font-awesome/css/font-awesome.min.css">
+
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.2/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+    <link rel="stylesheet" href="./css/style.css">
+  </head>
+  <body>
+    <div class="text-center">
+      <svg class="chart">
+      </svg>
+    </div>
+
+    <script src="bower_components/jquery/dist/jquery.min.js"></script>
+    <script src="bower_components/bootstrap/dist/js/bootstrap.min.js"></script>
+    <script src="bower_components/d3/d3.js" charset="utf-8"></script>
+    <script type="text/javascript">
+    var margin = {top: 20, right: 30, bottom: 30, left: 40},
+         width = 960 - margin.left - margin.right,
+        height = 500 - margin.top - margin.bottom;
+
+      var	parseDate = d3.timeParse("%Y-%m-%d");
+
+      var x = d3.scaleTime().range([0, width]);
+      var y = d3.scaleLinear().rangeRound([height, 0]);
+      //
+      var xAxis = d3.axisBottom(x).ticks(15, d3.timeFormat("%Y"));
+      // var yAxis = d3.axisLeft(y).ticks(10,"");
+      //
+      var chart = d3.select(".chart")
+          .attr("width", width + margin.left + margin.right)
+          .attr("height", height + margin.top + margin.bottom)
+        .append("g")
+          .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      jQuery.getJSON('https://raw.githubusercontent.com/FreeCodeCamp/ProjectReferenceData/master/GDP-data.json')
+      .done(function( json ) {
+        var data = json.data.map(function(d) {
+          return {
+            date: parseDate(d[0]),
+            value: d[1],
+          };
+      	});
+        console.log(data);
+
+        var barWidth = Math.ceil(width / data.length);
+
+        x.domain([d3.min(data, function (d) {return d.date;}),d3.max(data, function (d) {return d.date;})]);
+        y.domain([0, d3.max(data, function(d) { return d.value;})]);
+
+        var chart = d3.select(".chart")
+         .attr("width", width + margin.left + margin.right)
+         .attr("height", height + margin.top + margin.bottom)
+         .append("g")
+           .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+       chart.append("g")
+         .attr("class", "x axis")
+         .attr("transform", "translate(0," + height + ")")
+         .call(xAxis);
+     //
+    //    chart.append("g")
+    //      .attr("class", "y axis")
+    //      .call(yAxis)
+    //      .append("text")
+    //        .attr("transform", "rotate(-90)")
+    //        .attr("y", 6)
+    //        .attr("dy", "0.8em")
+    //        .style("text-anchor", "end")
+    //        .text("Gross Domestic Product, USA");
+     //
+     chart.selectAll(".bar")
+          .data(data)
+          .enter().append("rect")
+          .attr("class", "bar")
+          .attr("x", function(d) {
+            return x(d.date);
+          })
+          .attr("y", function(d) {
+            return y(d.value);
+          })
+          .attr("height", function(d) {
+            return height - y(d.value);
+          })
+          .attr("width", barWidth)
+      }).fail(function( jqxhr, textStatus, error ) {
+          var err = textStatus + ", " + error;
+          console.log( "Request Failed: " + err );
+      });
+    </script>
+  </body>
+</html>
