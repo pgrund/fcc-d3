@@ -25,7 +25,7 @@
     <script src="bower_components/bootstrap/dist/js/bootstrap.min.js"></script>
     <script src="bower_components/d3/d3.js" charset="utf-8"></script>
     <script type="text/javascript">
-    var margin = {top: 20, right: 30, bottom: 30, left: 40},
+    var margin = {top: 20, right: 30, bottom: 30, left: 60},
          width = 960 - margin.left - margin.right,
         height = 500 - margin.top - margin.bottom;
 
@@ -35,13 +35,15 @@
       var y = d3.scaleLinear().rangeRound([height, 0]);
       //
       var xAxis = d3.axisBottom(x).ticks(15, d3.timeFormat("%Y"));
-      // var yAxis = d3.axisLeft(y).ticks(10,"");
+      var yAxis = d3.axisLeft(y);
       //
       var chart = d3.select(".chart")
           .attr("width", width + margin.left + margin.right)
           .attr("height", height + margin.top + margin.bottom)
         .append("g")
           .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      var divTooltip = d3.select("body").append("div").attr("class", "toolTip");
 
       jQuery.getJSON('https://raw.githubusercontent.com/FreeCodeCamp/ProjectReferenceData/master/GDP-data.json')
       .done(function( json ) {
@@ -51,7 +53,6 @@
             value: d[1],
           };
       	});
-        console.log(data);
 
         var barWidth = Math.ceil(width / data.length);
 
@@ -68,31 +69,49 @@
          .attr("class", "x axis")
          .attr("transform", "translate(0," + height + ")")
          .call(xAxis);
-     //
-    //    chart.append("g")
-    //      .attr("class", "y axis")
-    //      .call(yAxis)
-    //      .append("text")
-    //        .attr("transform", "rotate(-90)")
-    //        .attr("y", 6)
-    //        .attr("dy", "0.8em")
-    //        .style("text-anchor", "end")
-    //        .text("Gross Domestic Product, USA");
-     //
+
+       chart.append("g")
+         .attr("class", "y axis")
+         .call(yAxis)
+         .append("text")
+           .attr("transform", "rotate(-90)")
+           .attr("y", 6)
+           .attr("dy", "0.8em")
+           .style("text-anchor", "end")
+           .text("Gross Domestic Product, USA");
+
+
      chart.selectAll(".bar")
           .data(data)
           .enter().append("rect")
-          .attr("class", "bar")
-          .attr("x", function(d) {
-            return x(d.date);
+            .attr("class", "bar")
+            .attr("x", function(d) {
+              return x(d.date);
+            })
+            .attr("y", function(d) {
+              return y(d.value);
+            })
+            .attr("height", function(d) {
+              return height - y(d.value);
+            })
+            .attr("width", barWidth)
+            .on("mousemove", function(d){
+              d3.select(this).classed('mouseover', true);
+
+              divTooltip.style("left", d3.event.pageX+10+"px");
+              divTooltip.style("top", d3.event.pageY-25+"px");
+              divTooltip.style("display", "inline-block");
+              var x = d3.event.pageX, y = d3.event.pageY
+              var elements = document.querySelectorAll(':hover');
+              l = elements.length
+              l = l-1
+              elementData = elements[l].__data__
+              divTooltip.html(d3.format("$,.2f")(elementData.value)+"<br>"+d3.timeFormat('%b - %Y')(elementData.date));
           })
-          .attr("y", function(d) {
-            return y(d.value);
-          })
-          .attr("height", function(d) {
-            return height - y(d.value);
-          })
-          .attr("width", barWidth)
+          .on("mouseout", function(d){
+            d3.select(this).classed('mouseover', false);
+              divTooltip.style("display", "none");
+          });
       }).fail(function( jqxhr, textStatus, error ) {
           var err = textStatus + ", " + error;
           console.log( "Request Failed: " + err );
