@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>FreeCodeCamp Challenge - D3 Heat Map</title>
+
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.2/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+    <link rel="stylesheet" href="./css/style.css">
+  </head>
+  <body>
+    <h2>Monthly Global Land-Surface Temperature</h2>
+    <div>
+      <svg class="chart">
+      </svg>
+    </div>
+
+    <script src="bower_components/jquery/dist/jquery.min.js"></script>
+    <script src="bower_components/d3/d3.js" charset="utf-8"></script>
+    <script type="text/javascript">
+      var margin = {top: 20, right: 30, bottom: 30, left: 90},
+           width = 1200 - margin.left - margin.right,
+          height = 640 - margin.top - margin.bottom;
+
+      var chart = d3.select(".chart")
+          .attr("width", width + margin.left + margin.right)
+          .attr("height", height + margin.top + margin.bottom)
+        .append("g")
+          .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      var divTooltip = d3.select("body").append("div").attr("class", "toolTip");
+
+      jQuery.getJSON('https://raw.githubusercontent.com/FreeCodeCamp/ProjectReferenceData/master/global-temperature.json')
+      .done(function( json ) {
+
+        var data = json.monthlyVariance.map(function(item) {
+          return {
+            date: new Date(item.year, item.month, 1),
+            month: item.month,
+            year: item.year,
+            variance: item.variance,
+            value: json.baseTemperature + item.variance
+          };
+        });
+
+        var x_elements = d3.set(data.map(function( item ) { return item.year; } )).values(),
+            y_elements = d3.set(data.map(function( item ) { return item.month; } )).values();
+
+        var itemWidth = width / x_elements.length,
+           itemHeight = height / y_elements.length;
+
+
+        var xAxis = d3.axisBottom(
+            d3.scaleTime()
+            .domain([ new Date(d3.min(x_elements), 0), new Date(d3.max(x_elements), 0)])
+            .range([0, x_elements.length * itemWidth])
+          ).ticks(d3.timeYear.every(15));
+
+        var yAxis = d3.axisLeft(
+              d3.scaleBand()
+                .domain(y_elements)
+                .range([0, y_elements.length * itemHeight ])
+            ).tickFormat(function (d) {
+                return d3.timeFormat('%B')(new Date(1970, d - 1));
+            });
+
+        var colorScale = d3.scaleQuantile()
+            .range(["#5e4fa2", "#3288bd", "#66c2a5", "#abdda4", "#e6f598", "#ffffbf", "#fee08b", "#fdae61", "#f46d43", "#d53e4f", "#9e0142"]);
+
+          //   .on("mousemove", function(d){
+          //     d3.select(this).classed('mouseover', true);
+          //
+          //     divTooltip.style("left", d3.event.pageX+10+"px");
+          //     divTooltip.style("top", d3.event.pageY-25+"px");
+          //     divTooltip.style("display", "inline-block");
+          //     var x = d3.event.pageX, y = d3.event.pageY
+          //     var elements = document.querySelectorAll(':hover');
+          //     l = elements.length
+          //     l = l-1
+          //     elementData = elements[l].__data__
+          //     divTooltip.html(d3.format("$,.2f")(elementData.value)+"<br>"+d3.timeFormat('%b - %Y')(elementData.date));
+          // })
+          // .on("mouseout", function(d){
+          //   d3.select(this).classed('mouseover', false);
+          //     divTooltip.style("display", "none");
+          // });
+          chart.append("g")
+              .attr("class", "y axis")
+              .call(yAxis)
+              .selectAll('text')
+              .attr('font-weight', 'normal');
+
+          chart.append("g")
+              .attr("class", "x axis")
+              .call(xAxis)
+              .selectAll('text')
+              .attr('font-weight', 'normal')
+              .style("text-anchor", "start")
+              .attr("dx", ".8em")
+              .attr("dy", ".5em")
+              ;
+      }).fail(function( jqxhr, textStatus, error ) {
+          var err = textStatus + ", " + error;
+          console.log( "Request Failed: " + err );
+      });
+    </script>
+  </body>
+</html>
