@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>FreeCodeCamp - D3 Scatterplot challenge</title>
+
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.2/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+    <link rel="stylesheet" type="text/css" href="https://cloud.github.com/downloads/lafeber/world-flags-sprite/flags32.css"/>
+    <link rel="stylesheet" href="./css/style.css">
+
+  </head>
+  <body>
+    <div class="text-center">
+      <svg class="chart">
+      </svg>
+    </div>
+
+    <script src="bower_components/d3/d3.js" charset="utf-8"></script>
+    <script src="bower_components/jquery/dist/jquery.min.js" charset="utf-8"></script>
+
+    <script type="text/javascript">
+      var margin = {top: 20, right: 30, bottom: 40, left: 60},
+         width = 960 - margin.left - margin.right,
+        height = 500 - margin.top - margin.bottom;
+
+      function iso2(iso3) {
+        return {
+          ITA: 'IT',
+          USA: 'US',
+          GER: 'DE',
+          ESP: 'ES',
+          SUI: 'CH',
+          DEN: 'DK',
+          FRA: 'FR',
+          POR: 'PT',
+          COL: 'CO',
+          UKR: 'UA',
+          RUS: 'RU'
+        }[iso3].toLowerCase();
+      }
+      var chart = d3.select(".chart")
+          .attr("width", width + margin.left + margin.right)
+          .attr("height", height + margin.top + margin.bottom)
+        .append("g")
+          .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      var x = d3.scaleTime().range([ 0, width ]);
+      var y = d3.scaleLinear().range([ 0, height ]);
+
+      var xAxis = d3.axisBottom(x).ticks(5);
+      var yAxis = d3.axisLeft(y);
+
+      var divTooltip = d3.select("body").append("div").attr("class", "toolTip");
+
+      jQuery.getJSON('https://raw.githubusercontent.com/FreeCodeCamp/ProjectReferenceData/master/cyclist-data.json')
+      .done(function( data ) {
+
+
+          var secMin = d3.min(data, function(d) { return d.Seconds; });
+          function getMinSecsToMinVal(val) {
+            return new Date((val - secMin) * 1000)
+          }
+          x.domain([new Date(0), getMinSecsToMinVal(d3.max(data, function(d) { return d.Seconds; }))]);
+          y.domain([0, d3.max(data, function(d) { return d.Place; })])
+
+         chart.append("g")
+           .attr("class", "x axis")
+           .attr("transform", "translate(0," + height + ")")
+           .call(xAxis.tickFormat(d3.timeFormat('%M:%S')));
+         // Add the text label for the x axis
+         chart.append("text")
+           .attr('class', 'axis label')
+           .attr("transform", "translate(" + (width / 2) + " ," + (height +  margin.bottom) + ")")
+           .style("text-anchor", "middle")
+           .text("Minutes behind Fastest Time");
+
+         chart.append("g")
+           .attr("class", "y axis")
+           .call(yAxis);
+       // Add the text label for the Y axis
+         chart.append("text")
+             .attr("transform", "rotate(-90)")
+             .attr("y", 0 - margin.left)
+             .attr("x",0 - (height / 2))
+             .attr("dy", "1em")
+             .style("text-anchor", "middle")
+             .text("Ranking");
+
+
+        chart.selectAll('.scatter-dots')
+          .data(data)
+          .enter().append('circle')
+            .attr('cx', function(d,i) {
+              return x(getMinSecsToMinVal(d.Seconds));
+            })
+            .attr('cy', function(d,i) { return y(d.Place); })
+            .attr('r', 8)
+            .classed('doping', function(d){
+              return d.Doping.trim().length > 0;
+            })
+            .on('mouseover', function(d,i){
+              d3.select(this).classed('mouseover', true);
+
+              divTooltip.style("left", d3.event.pageX+10+"px");
+              divTooltip.style("top", d3.event.pageY-25+"px");
+              divTooltip.style("display", "inline-block");
+              var x = d3.event.pageX, y = d3.event.pageY
+              var elements = document.querySelectorAll(':hover');
+              l = elements.length
+              l = l-1
+              elementData = elements[l].__data__
+              divTooltip.html(
+                '<ul class="f32">'+
+                '<li class="name">'+elementData.Name+
+                '<span class="flag '+ iso2(elementData.Nationality)+'"></span>'+
+                '<span class="year">('+elementData.Year+')</span></li>'+
+                '<li class="time">Time: '+elementData.Time+'</li>' +
+                '<li class="doping">'+elementData.Doping+'</li></ul>'
+              );
+            })
+            .on("mouseout", function(d){
+              d3.select(this).classed('mouseover', false);
+                divTooltip.style("display", "none");
+            });
+
+      }).fail(function( jqxhr, textStatus, error ) {
+          var err = textStatus + ", " + error;
+          console.log( "Request Failed: " + err );
+      });
+    </script>
+  </body>
+</html>
