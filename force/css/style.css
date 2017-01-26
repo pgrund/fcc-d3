@@ -13,7 +13,7 @@ div, h2 {
   text-align: center;
 }
 svg {
-  background-color: white;
+  background-color: whitesmoke;
 }
 div.title, div.title svg {
   background-color: lightgray;
@@ -53,21 +53,30 @@ div.title {
     padding: 5px;
     text-align: center;
 }
-.toolTip ul {
+.toolTip>ul {
   list-style: none;
   padding-left: 0;
   margin: 0;
 }
-.toolTip li.year {
+.toolTip li.name {
   margin-bottom: 10px;
   padding: 5px;
-  border: solid thin black;
 
-  color: black;
+  color: white;
+  background-color: black;
+
   font-weight: bold;
   text-transform: uppercase;
-  text-shadow: 2px 2px white;
+  text-shadow: 2px 2px darkgray;
 }
-.toolTip li.temp {
-  font-weight: bold;
+.toolTip li.border {
+  text-align: left;
+}
+.toolTip li.border span {
+  font-style: italic;
+  font-size: smaller;
+}
+.nodes>image {
+  border: solid thin black;
+  stroke: black;
 }

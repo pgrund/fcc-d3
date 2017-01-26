@@ -11,7 +11,6 @@
       <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
     <![endif]-->
     <link rel="stylesheet" href="./css/style.css">
-    <link rel="stylesheet" href="./css/flags.css">
   </head>
   <body>
     <h2>Force Directed Graph of State Contiguity</h2>
@@ -22,7 +21,7 @@
     <script type="text/javascript">
       var margin = {top: 20, right: 30, bottom: 20, left: 30},
            width = 1200 - margin.left - margin.right,
-          height = 640 - margin.top - margin.bottom;
+          height = 800 - margin.top - margin.bottom;
 
       var svg = d3.select(".chart")
         .append("svg")
@@ -60,7 +59,7 @@
 
           var simulation = d3.forceSimulation()
               .force("link", d3.forceLink().id(function(d,i) { return i }))
-              .force("collide",d3.forceCollide( function(d){return d.r + 8 }).iterations(16) )
+              .force("collide",d3.forceCollide( 30 ).iterations(16) )
               .force("charge", d3.forceManyBody())
               .force("center", d3.forceCenter(width / 2, height / 2))
               .force("y", d3.forceY(0))
@@ -78,22 +77,55 @@
               .attr("class", "nodes")
               .selectAll("image")
               .data(data.nodes)
-              .enter().append("rect")
-              .attr("width", 16)
-              .attr("height", 10)
-              .attr("class", function(d) { return "flag flag-"+ d.code;})
+              .enter().append("image")
+              .attr("width", 30)
+              .attr("height", 21)
+              .attr("x", 0)
+              .attr("y", 0)
+              .attr("xlink:href", function(d) { return "http://flagpedia.net/data/flags/mini/"+ d.code+".png";})
+              .on("mousemove", function(d,i){
+                   var neighbors = data.links.filter(function(l){ return l.source == d }).map(function(l) { return l.target;});
+                   neighbors = neighbors.concat(
+                     data.links.filter(function(l){
+                       return l.target == d }
+                       ).map(function(l) { return l.source;}));
+                   d3.select(this).classed('mouseover', true);
+                   divTooltip.style("left", d3.event.pageX+10+"px");
+                   divTooltip.style("top", d3.event.pageY-25+"px");
+                   divTooltip.style("display", "inline-block");
+                   var x = d3.event.pageX, y = d3.event.pageY
+                   var elements = document.querySelectorAll(':hover');
+                   l = elements.length
+                   l = l-1
+                   elementData = elements[l].__data__
+                   divTooltip.html( "<ul>" +
+                       "<li class='name'>"
+                         + d.country +
+                         " <span>(" + d.code + ")</span>" +
+                       "</li>" +
+                       "<li class='border'>borders <span>(" + neighbors.length + ")</span>" +
+                         "<ul>" +
+                           neighbors.map( function(c) {return "<li>"+c.country +"</li>";}).join('') +
+                         "</ul>" +
+                       "</li>" +
+                     "</ul>"
+                   );
+              })
+              .on("mouseout", function(d){
+                   d3.select(this).classed('mouseover', false);
+                   divTooltip.style("display", "none");
+              })
               .call(d3.drag()
                   .on("start", dragstarted)
                   .on("drag", dragged)
                   .on("end", dragended));
 
-
           var ticked = function() {
               link
-                  .attr("x1", function(d) { return d.source.x; })
-                  .attr("y1", function(d) { return d.source.y; })
-                  .attr("x2", function(d) { return d.target.x; })
-                  .attr("y2", function(d) { return d.target.y; });
+                  .attr("x1", function(d) { return d.source.x + 15; })
+                  .attr("y1", function(d) { return d.source.y + 10; })
+                  .attr("x2", function(d) { return d.target.x + 15; })
+                  .attr("y2", function(d) { return d.target.y + 10; });
 
               node
                   .attr("x", function(d) { return d.x; })
