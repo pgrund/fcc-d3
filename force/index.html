@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>FreeCodeCamp Challenge - D3 Force</title>
+
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.2/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+    <link rel="stylesheet" href="./css/style.css">
+    <link rel="stylesheet" href="./css/flags.css">
+  </head>
+  <body>
+    <h2>Force Directed Graph of State Contiguity</h2>
+    <div class="chart"></div>
+
+    <script src="bower_components/jquery/dist/jquery.min.js"></script>
+    <script src="bower_components/d3/d3.js" charset="utf-8"></script>
+    <script type="text/javascript">
+      var margin = {top: 20, right: 30, bottom: 20, left: 30},
+           width = 1200 - margin.left - margin.right,
+          height = 640 - margin.top - margin.bottom;
+
+      var svg = d3.select(".chart")
+        .append("svg")
+          .attr("width", width + margin.left + margin.right)
+          .attr("height", height + margin.top + margin.bottom)
+          .append("g")
+            .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+
+      var simulation = d3.forceSimulation()
+          .force("link", d3.forceLink().id(function(d) { return d.id; }))
+          .force("charge", d3.forceManyBody())
+          .force("center", d3.forceCenter(width / 2, height / 2));
+
+      var divTooltip = d3.select("body").append("div").attr("class", "toolTip");
+
+      jQuery.getJSON('https://raw.githubusercontent.com/DealPete/forceDirected/master/countries.json')
+        .done(function(jsonData) {
+          console.log('sucessfully load remote data ... ');
+          load(jsonData);
+        })
+        .fail(function( jqxhr, textStatus, error ) {
+          console.log( "Remote Request Failed: " + textStatus + ", " + error );
+
+          d3.json('countries.json', function(error, graph){
+            if(error) throw error;
+
+            console.log('loaded from local file ... ');
+            load(graph);
+          });
+        });
+
+      function load( data ) {
+          console.log(data);
+
+          var simulation = d3.forceSimulation()
+              .force("link", d3.forceLink().id(function(d,i) { return i }))
+              .force("collide",d3.forceCollide( function(d){return d.r + 8 }).iterations(16) )
+              .force("charge", d3.forceManyBody())
+              .force("center", d3.forceCenter(width / 2, height / 2))
+              .force("y", d3.forceY(0))
+              .force("x", d3.forceX(0))
+
+          var link = svg.append("g")
+              .attr("class", "links")
+              .selectAll("line")
+              .data(data.links)
+              .enter()
+              .append("line")
+              .attr("stroke", "black")
+
+          var node = svg.append("g")
+              .attr("class", "nodes")
+              .selectAll("image")
+              .data(data.nodes)
+              .enter().append("rect")
+              .attr("width", 16)
+              .attr("height", 10)
+              .attr("class", function(d) { return "flag flag-"+ d.code;})
+              .call(d3.drag()
+                  .on("start", dragstarted)
+                  .on("drag", dragged)
+                  .on("end", dragended));
+
+
+          var ticked = function() {
+              link
+                  .attr("x1", function(d) { return d.source.x; })
+                  .attr("y1", function(d) { return d.source.y; })
+                  .attr("x2", function(d) { return d.target.x; })
+                  .attr("y2", function(d) { return d.target.y; });
+
+              node
+                  .attr("x", function(d) { return d.x; })
+                  .attr("y", function(d) { return d.y; });
+          }
+
+          simulation
+              .nodes(data.nodes)
+              .on("tick", ticked);
+
+          simulation.force("link")
+              .links(data.links);
+
+
+
+          function dragstarted(d) {
+              if (!d3.event.active) simulation.alphaTarget(0.3).restart();
+              d.fx = d.x;
+              d.fy = d.y;
+          }
+
+          function dragged(d) {
+              d.fx = d3.event.x;
+              d.fy = d3.event.y;
+          }
+
+          function dragended(d) {
+              if (!d3.event.active) simulation.alphaTarget(0);
+              d.fx = null;
+              d.fy = null;
+          }
+
+      }; // end load
+    </script>
+  </body>
+</html>
