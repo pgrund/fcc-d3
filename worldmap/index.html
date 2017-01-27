@@ -14,14 +14,21 @@
   </head>
   <body>
     <h2>Map Data Across the Globe</h2>
-    <div class="chart"></div>
+    <div class="chart" id="container"></div>
 
     <script src="bower_components/jquery/dist/jquery.min.js"></script>
     <script src="bower_components/d3/d3.js" charset="utf-8"></script>
+    <script src="./bower_components/topojson/topojson.min.js"></script>
     <script type="text/javascript">
       var margin = {top: 20, right: 30, bottom: 20, left: 30},
            width = 1200 - margin.left - margin.right,
           height = 800 - margin.top - margin.bottom;
+
+      // d3.select(window).on("resize", throttle);
+
+      var zoom = d3.zoom()
+          .scaleExtent([1, 9])
+          .on("zoom", move);
 
       var svg = d3.select(".chart")
         .append("svg")
@@ -29,29 +36,180 @@
           .attr("height", height + margin.top + margin.bottom)
           .append("g")
             .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+      var color = d3.scaleOrdinal(d3.schemeCategory20c);
 
-      var divTooltip = d3.select("body").append("div").attr("class", "toolTip");
+      var tooltip = d3.select("body").append("div").attr("class", "toolTip");
 
-      jQuery.getJSON('https://raw.githubusercontent.com/FreeCodeCamp/ProjectReferenceData/master/meteorite-strike-data.json')
-        .done(function(jsonData) {
-          console.log('sucessfully load remote data ... ');
-          load(jsonData);
-        })
-        .fail(function( jqxhr, textStatus, error ) {
-          console.log( "Remote Request Failed: " + textStatus + ", " + error );
+      var topo,projection,path,svg,g;
 
-          d3.json('countries.json', function(error, graph){
-            if(error) throw error;
+      var graticule = d3.geoGraticule();
 
-            console.log('loaded from local file ... ');
-            load(graph);
+      projection = d3.geoMercator()
+        .translate([(width/2), (height/2)])
+        .scale( width / 2 / Math.PI);
+
+      path = d3.geoPath().projection(projection);
+
+      svg.attr("width", width)
+          .attr("height", height)
+          .call(zoom)
+          .on("click", click)
+          .append("g");
+
+      g = svg.append("g");
+
+      d3.json("data/world-topo-min.json", function(error, world) {
+
+        var countries = topojson.feature(world, world.objects.countries).features;
+
+        topo = countries;
+
+        svg.append("path")
+           .datum(graticule)
+           .attr("class", "graticule")
+           .attr("d", path);
+
+
+        g.append("path")
+         .datum({type: "LineString", coordinates: [[-180, 0], [-90, 0], [0, 0], [90, 0], [180, 0]]})
+         .attr("class", "equator")
+         .attr("d", path);
+
+
+        var country = g.selectAll(".country").data(topo);
+
+        country.enter().insert("path")
+            .attr("class", "country")
+            .attr("d", path)
+            .attr("id", function(d,i) { return d.id; })
+            .attr("title", function(d,i) { return d.properties.name; })
+            .style("fill", function(d,i) { return color(i);});
+
+        //offsets for tooltips
+        var offsetL = document.getElementById('container').offsetLeft+20;
+        var offsetT = document.getElementById('container').offsetTop+10;
+
+        //tooltips
+        country
+          .on("mousemove", function(d,i) {
+
+            var mouse = d3.mouse(svg.node()).map( function(d) { return parseInt(d); } );
+
+            tooltip.classed("hidden", false)
+                   .attr("style", "left:"+(mouse[0]+offsetL)+"px;top:"+(mouse[1]+offsetT)+"px")
+                   .html(d.properties.name);
+
+            })
+            .on("mouseout",  function(d,i) {
+              tooltip.classed("hidden", true);
+            });
+
+
+        //EXAMPLE: adding some capitals from external CSV file
+        // d3.csv("data/country-capitals.csv", function(err, capitals) {
+        //
+        //   capitals.forEach(function(i){
+        //     addpoint(i.CapitalLongitude, i.CapitalLatitude, i.CapitalName );
+        //   });
+        //
+        // });
+        jQuery.getJSON('https://raw.githubusercontent.com/FreeCodeCamp/ProjectReferenceData/master/meteorite-strike-data.json')
+          .done(function(jsonData) {
+            console.log('sucessfully load remote data ... ');
+            load(jsonData.features);
+          })
+          .fail(function( jqxhr, textStatus, error ) {
+            console.log( "Remote Request Failed: " + textStatus + ", " + error );
+
+            d3.json('./data/meteroite-strike-data.json', function(error, graph){
+              if(error) throw error;
+
+              console.log('loaded from local file ... ');
+              load(graph.features);
+            });
           });
+
+      });
+
+      function load(meteorites) {
+
+        meteorites.forEach(function(m){
+
+          var lon = Number(m.properties.reclong),
+              lat = Number(m.properties.reclat);
+
+          var gpoint = g.append("g").attr("class", "gpoint");
+          var x = projection([lat,lon])[0];
+          var y = projection([lat,lon])[1];
+          console.log(lon, lat, x, y, m.properties.name);
+          gpoint.append("svg:circle")
+                .attr("cx", x)
+                .attr("cy", y)
+                .attr("class","point")
+                .attr("r", 1.5);
+
+          //conditional in case a point has no associated text
+          if(m.properties.name.length>0){
+
+            gpoint.append("text")
+                  .attr("x", x+2)
+                  .attr("y", y+2)
+                  .attr("class","text")
+                  .text(m.properties.name);
+          }
         });
 
-      function load( data ) {
-          console.log(data);
+      }
 
-      }; // end load
+      function move() {
+
+        var t = d3.event.translate;
+        var s = d3.event.scale;
+        zscale = s;
+        var h = height/4;
+
+
+        t[0] = Math.min(
+          (width/height)  * (s - 1),
+          Math.max( width * (1 - s), t[0] )
+        );
+
+        t[1] = Math.min(
+          h * (s - 1) + h * s,
+          Math.max(height  * (1 - s) - h * s, t[1])
+        );
+
+        zoom.translate(t);
+        g.attr("transform", "translate(" + t + ")scale(" + s + ")");
+
+        //adjust the country hover stroke width based on zoom level
+        d3.selectAll(".country").style("stroke-width", 1.5 / s);
+
+      }
+
+      var throttleTimer;
+      function throttle() {
+        window.clearTimeout(throttleTimer);
+          throttleTimer = window.setTimeout(function() {
+            redraw();
+          }, 200);
+      }
+
+
+      //geo translation on mouse click in map
+      function click() {
+        var latlon = projection.invert(d3.mouse(this));
+        console.log(latlon);
+      }
+
+
+      //function to add points and text to the map (used in plotting capitals)
+      function addpoint(lat,lon,text) {
+
+
+
+      }
+
     </script>
   </body>
 </html>
