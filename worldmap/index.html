@@ -133,31 +133,28 @@
 
       function load(meteorites) {
 
-        meteorites.forEach(function(m){
+        // meteorites.sort(function(a,b) {
+        //   return b.properties.mass - a.properties.mass;
+        // })
 
-          var lon = Number(m.properties.reclong),
-              lat = Number(m.properties.reclat);
+        var meteorSize = d3.scaleLinear()
+          .domain([d3.min(meteorites, function(m) { return Number(m.properties.mass);}),
+             d3.max(meteorites, function(m) { return Number(m.properties.mass);})])
+          .range([2, 100]);
 
-          var gpoint = g.append("g").attr("class", "gpoint");
-          var x = projection([lat,lon])[0];
-          var y = projection([lat,lon])[1];
-          console.log(lon, lat, x, y, m.properties.name);
-          gpoint.append("svg:circle")
-                .attr("cx", x)
-                .attr("cy", y)
-                .attr("class","point")
-                .attr("r", 1.5);
-
-          //conditional in case a point has no associated text
-          if(m.properties.name.length>0){
-
-            gpoint.append("text")
-                  .attr("x", x+2)
-                  .attr("y", y+2)
-                  .attr("class","text")
-                  .text(m.properties.name);
-          }
-        });
+        g.selectAll("path")
+          .data(meteorites)
+          .enter().append("path")
+            .attr("d", path.pointRadius(function(m){
+              var size = meteorSize(m.properties.mass);
+              // console.log(m.properties.mass, size)
+              return size;
+            }))
+            .attr('opacity', 0.4)
+            .on('mouseover', function(m) {
+              console.log(m);
+            });
+        return;
 
       }
 
