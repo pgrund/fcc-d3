@@ -24,6 +24,12 @@
            width = 1200 - margin.left - margin.right,
           height = 800 - margin.top - margin.bottom;
 
+      var weight = function(w) {
+            if (w < 1000) return w + " grams";
+            if (w < 1000000) return w/1000 + " kilograms";
+            return w/1000000 + " tons";
+      };
+
       var zoom = d3.zoom()
           .scaleExtent([1, 9])
           .on("zoom", zoomed);
@@ -83,7 +89,7 @@
             .attr("title", function(d,i) { return d.properties.name; })
             .style("fill", "steelblue")
             .style("fill-opacity", 0.5)
-            .style("stroke", "white");
+            .style("stroke", "whitesmoke");
 
         //offsets for tooltips
         var offsetL = document.getElementById('container').offsetLeft+20;
@@ -101,49 +107,64 @@
               if(error) throw error;
 
               console.log('loaded from local file ... ');
-              var meteorites = graph.features
-                .filter(function(m) {
-                  return m.geometry.type == 'Point';
-                })
-                .map(function(m) {
-                  return (m.properties.mass == undefined ? 2 : Number(m.properties.mass));
-                })
-                .sort(function(a,b) { return Number(a.properties.mass) - Number(b.properties.mass);});
-
-              load(meteorites);
+              load(graph.features);
             });
           });
 
       });
 
-      function load(meteorites) {
+      function load(data) {
+
+        var meteorites = data.map(function(m) {
+          if( Number.isNaN(m.properties.mass) ) {
+            m.properties.radius = 2;
+          } else {
+            m.properties.radius = Number(m.properties.mass);
+          }
+          return m;
+        }).sort(function(a, b) { return b.properties.radius - a.properties.radius;});
 
         var meteorSize = d3.scaleLinear()
-          .domain([d3.min(meteorites, function(m) { return Number(m.properties.mass);}),
-             d3.max(meteorites, function(m) { return Number(m.properties.mass);})/4])
+          .domain([d3.min(meteorites, function(m) { return m.properties.radius;}),
+             d3.max(meteorites, function(m) { return m.properties.radius;})/4])
           .range([2, 100])
           .clamp(true);
 
         g.selectAll("path")
-          .data(meteorites, function(m) {
+          .data(meteorites
+            , function(m) {
             if(m.properties == undefined ) {
-              console.log(m);
               return 'error';
             }
             return m.properties.id;
-          })
+          }
+          )
           .enter().append("path")
             .attr("d", path.pointRadius(function(m){
-              return meteorSize(m.properties.mass);
+              return meteorSize(m.properties.radius);
             }))
+            .attr("title", function(m) { return m.properties.name; })
             .attr('opacity', 0.6)
-            .style("fill", function(m, i) {return color(m.properties.mass)})
+            .style("fill", function(m, i) {return color(m.properties.radius)})
             .on("mouseover", function(m) {
               d3.select(this).classed("mouseover", true);
-              // console.log(m);
+              tooltip.style("left", d3.event.pageX+10+"px");
+              tooltip.style("top", d3.event.pageY-25+"px");
+              tooltip.style("display", "inline-block");
+              var x = d3.event.pageX, y = d3.event.pageY
+              tooltip.html( "<ul>" +
+                  "<li class='name' style='background-color:" + color(m.properties.radius) + "'>"
+                    + m.properties.name +
+                  "</li>" +
+                  "<li class='mass'>mass: <span>" + weight(m.properties.mass) + "</span></li>" +
+                  "<li class='year'>" + d3.timeFormat('%B %Y')(new Date(m.properties.year)) +"</li>" +
+                "</ul>"
+              );
             })
             .on("mouseleave", function(m) {
               d3.select(this).classed("mouseover", false);
+               tooltip.style("display", "none");
+               tooltip.html('');
             });
         return;
 
@@ -156,7 +177,7 @@
       //geo translation on mouse click in map
       function click() {
         var latlon = projection.invert(d3.mouse(this));
-        console.log(latlon);
+
       }
 
     </script>
