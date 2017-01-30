@@ -80,3 +80,7 @@ div.title {
   border: solid thin black;
   stroke: black;
 }
+.mouseover {
+  stroke: black;
+  opacity: 1;
+}
